@@ -4,7 +4,6 @@ Este projeto contém scripts para facilitar a execução do ambiente Node.js den
 
 ## Sobre:
 
-
 Este projeto foi criado para facilitar o gerenciamento de um ambiente Node.js utilizando Docker. Com ele, você pode executar diferentes versões do Node no seu sistema sem precisar instalá-las diretamente, evitando conflitos entre versões e mantendo seu ambiente limpo.
 
 Além disso, ele permite rodar aplicações simples, como APIs, sem a necessidade de gerenciar arquivos docker-compose.yml ou Dockerfile, tornando o processo mais ágil e prático. Assim, você pode aproveitar a flexibilidade do Docker sem complicações, executando seus projetos de forma isolada e organizada.
@@ -85,7 +84,7 @@ nodocker set-node-version <Versão node ex: 20>
 
 ### Configurando o Container
 
-Ddefine o nome do container para que os scripts saibam qual container utilizar:
+Defina o nome do container para que os scripts saibam qual container utilizar:
 
 ```bash
 nodocker set <meu-container>
@@ -132,7 +131,6 @@ Se quiser remover a configuração do container:
 ```bash
 nodocker unset
 ```
-
 
 ### Executando Comandos no Container
 
