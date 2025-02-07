@@ -1,0 +1,11 @@
+#!/bin/bash
+
+
+if [ -z "$NODE_ENV_DK" ]; then
+    echo "Erro: a variável de ambiente NODE_ENV_DK não está definida."
+    exit 1
+fi
+
+CONTAINER_NAME="${NODE_ENV_DK}"
+
+docker exec -it "$CONTAINER_NAME" npx "$@"

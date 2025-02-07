@@ -1,0 +1,106 @@
+#!/bin/bash
+
+# Detecta o shell e escolhe o arquivo de perfil correto
+if [ -n "$ZSH_VERSION" ]; then
+  PROFILE_FILE="$HOME/.zshrc"
+else
+  PROFILE_FILE="$HOME/.bashrc"
+fi
+
+# Se NODE_ENV_DK não estiver definido, tenta carregar do perfil
+if [ -z "$NODE_ENV_DK" ]; then
+  if grep -q "export NODE_ENV_DK=" "$PROFILE_FILE"; then
+    NODE_ENV_DK=$(grep "export NODE_ENV_DK=" "$PROFILE_FILE" | cut -d '=' -f2)
+    export NODE_ENV_DK
+  fi
+fi
+
+# Define o nome do container baseado no valor da variável
+CONTAINER_NAME="${NODE_ENV_DK:-}"
+
+case "$1" in
+  start)
+    if [ -z "$CONTAINER_NAME" ]; then
+      echo "❌ Erro: NODE_ENV_DK não está definido. Use '$0 set <container-name>' antes."
+      exit 1
+    fi
+
+    if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+      echo "⚡ O container '${CONTAINER_NAME}' já existe. Iniciando..."
+      docker start "${CONTAINER_NAME}"
+    else
+      echo "🚀 Criando e iniciando o container '${CONTAINER_NAME}'..."
+      docker run -dit --name "${CONTAINER_NAME}" -v "$PWD":/home/node/app -w /home/node/app -p 3000:3000 node:20 bash
+    fi
+    ;;
+
+  stop)
+    if [ -z "$CONTAINER_NAME" ]; then
+      echo "❌ Erro: NODE_ENV_DK não está definido. Use '$0 set <container-name>' antes."
+      exit 1
+    fi
+
+    echo "🛑 Parando o container '${CONTAINER_NAME}'..."
+    docker stop "${CONTAINER_NAME}"
+    ;;
+
+  remove)
+    if [ -z "$CONTAINER_NAME" ]; then
+      echo "❌ Erro: NODE_ENV_DK não está definido. Use '$0 set <container-name>' antes."
+      exit 1
+    fi
+
+    echo "🔥 Removendo o container '${CONTAINER_NAME}'..."
+    docker rm "${CONTAINER_NAME}"
+    ;;
+
+  status)
+    if [ -z "$CONTAINER_NAME" ]; then
+      echo "❌ Erro: NODE_ENV_DK não está definido. Use '$0 set <container-name>' antes."
+      exit 1
+    fi
+
+    docker ps -a --format "table {{.Names}}\t{{.Status}}" | grep "${CONTAINER_NAME}" || echo "❌ O container '${CONTAINER_NAME}' não existe."
+    ;;
+
+  shell)
+    if [ -z "$CONTAINER_NAME" ]; then
+      echo "❌ Erro: NODE_ENV_DK não está definido. Use '$0 set <container-name>' antes."
+      exit 1
+    fi
+
+    echo "🔍 Abrindo um shell dentro do container '${CONTAINER_NAME}'..."
+    docker exec -it "${CONTAINER_NAME}" bash
+    ;;
+
+  set)
+    if [ -z "$2" ]; then
+      echo "❌ Erro: Você deve fornecer um nome para o container."
+      echo "Uso: $0 set <container-name>"
+      exit 1
+    fi
+
+    CONTAINER_NAME="$2"
+    export NODE_ENV_DK="$2"
+
+    # Adiciona a variável ao arquivo de perfil para persistência
+    if grep -q "export NODE_ENV_DK=" "$PROFILE_FILE"; then
+      sed -i "s|export NODE_ENV_DK=.*|export NODE_ENV_DK=${CONTAINER_NAME}|" "$PROFILE_FILE"
+    else
+      echo "export NODE_ENV_DK=${CONTAINER_NAME}" >> "$PROFILE_FILE"
+    fi
+
+    echo "✅ Variável NODE_ENV_DK definida como '${CONTAINER_NAME}' e persistida no ambiente."
+    ;;
+
+  unset)
+    unset NODE_ENV_DK
+    sed -i "/export NODE_ENV_DK=/d" "$PROFILE_FILE"
+    echo "🗑️ Variável NODE_ENV_DK removida."
+    ;;
+
+  *)
+    echo "❌ Uso: $0 {start|stop|remove|status|shell|set <container-name>|unset}"
+    exit 1
+    ;;
+esac
