@@ -2,12 +2,19 @@
 
 Este projeto contém scripts para facilitar a execução do ambiente Node.js dentro de um container Docker. 
 
+## Sobre:
+
+
+Este projeto foi criado para facilitar o gerenciamento de um ambiente Node.js utilizando Docker. Com ele, você pode executar diferentes versões do Node no seu sistema sem precisar instalá-las diretamente, evitando conflitos entre versões e mantendo seu ambiente limpo.
+
+Além disso, ele permite rodar aplicações simples, como APIs, sem a necessidade de gerenciar arquivos docker-compose.yml ou Dockerfile, tornando o processo mais ágil e prático. Assim, você pode aproveitar a flexibilidade do Docker sem complicações, executando seus projetos de forma isolada e organizada.
+
 ## Como Clonar o Repositório
 
 Para obter os arquivos deste repositório, clone-o usando o seguinte comando:
 
 ```bash
-git clone [<URL_DO_SEU_REPOSITORIO>](https://github.com/luan-lulucricri/nodocker.git)
+git clone https://github.com/luan-lulucricri/nodocker.git
 cd nodocker
 ```
 
@@ -68,12 +75,20 @@ newgrp docker
 
 Os scripts permitem interagir com o container de Node.js sem precisar executar manualmente os comandos `docker exec`. 
 
-### Configurando o Container
+### Configurando o Node.js
 
-Primeiro, defina o nome do container para que os scripts saibam qual container utilizar:
+Primeiro, defina a versão do container Node.js para que os scripts saibam qual versão utilizar:
 
 ```bash
-nodocker set meu-container
+nodocker set-node-version <Versão node ex: 20>
+```
+
+### Configurando o Container
+
+Ddefine o nome do container para que os scripts saibam qual container utilizar:
+
+```bash
+nodocker set <meu-container>
 ```
 
 ### Criando e Iniciando o Container
@@ -117,6 +132,7 @@ Se quiser remover a configuração do container:
 ```bash
 nodocker unset
 ```
+
 
 ### Executando Comandos no Container
 

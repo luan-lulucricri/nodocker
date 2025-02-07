@@ -15,6 +15,16 @@ if [ -z "$NODE_ENV_DK" ]; then
   fi
 fi
 
+# Se NODE_VERSION_DK não estiver definido, tenta carregar do perfil
+if [ -z "$NODE_VERSION_DK" ]; then
+  if grep -q "export NODE_VERSION_DK=" "$PROFILE_FILE"; then
+    NODE_VERSION_DK=$(grep "export NODE_VERSION_DK=" "$PROFILE_FILE" | cut -d '=' -f2)
+    export NODE_VERSION_DK
+  else
+    NODE_VERSION_DK="latest"
+  fi
+fi
+
 # Define o nome do container baseado no valor da variável
 CONTAINER_NAME="${NODE_ENV_DK:-}"
 
@@ -29,8 +39,8 @@ case "$1" in
       echo "⚡ O container '${CONTAINER_NAME}' já existe. Iniciando..."
       docker start "${CONTAINER_NAME}"
     else
-      echo "🚀 Criando e iniciando o container '${CONTAINER_NAME}'..."
-      docker run -dit --name "${CONTAINER_NAME}" -v "$PWD":/home/node/app -w /home/node/app -p 3000:3000 node:20 bash
+      echo "🚀 Criando e iniciando o container '${CONTAINER_NAME}' com Node.js versão '${NODE_VERSION_DK}'..."
+      docker run -dit --name "${CONTAINER_NAME}" -v "$PWD":/home/node/app -w /home/node/app -p 3000:3000 node:${NODE_VERSION_DK} bash
     fi
     ;;
 
@@ -93,14 +103,38 @@ case "$1" in
     echo "✅ Variável NODE_ENV_DK definida como '${CONTAINER_NAME}' e persistida no ambiente."
     ;;
 
+  set-node-version)
+    if [ -z "$2" ]; then
+      echo "❌ Erro: Você deve fornecer uma versão do Node.js."
+      echo "Uso: $0 set-node-version <versão>"
+      exit 1
+    fi
+
+    NODE_VERSION_DK="$2"
+    export NODE_VERSION_DK="$2"
+
+    # Adiciona a variável ao arquivo de perfil para persistência
+    if grep -q "export NODE_VERSION_DK=" "$PROFILE_FILE"; then
+      sed -i "s|export NODE_VERSION_DK=.*|export NODE_VERSION_DK=${NODE_VERSION_DK}|" "$PROFILE_FILE"
+    else
+      echo "export NODE_VERSION_DK=${NODE_VERSION_DK}" >> "$PROFILE_FILE"
+    fi
+
+    echo "✅ Versão do Node.js definida como '${NODE_VERSION_DK}' e persistida no ambiente."
+    ;;
+
   unset)
     unset NODE_ENV_DK
     sed -i "/export NODE_ENV_DK=/d" "$PROFILE_FILE"
     echo "🗑️ Variável NODE_ENV_DK removida."
+
+    unset NODE_VERSION_DK
+    sed -i "/export NODE_VERSION_DK=/d" "$PROFILE_FILE"
+    echo "🗑️ Variável NODE_VERSION_DK removida."
     ;;
 
   *)
-    echo "❌ Uso: $0 {start|stop|remove|status|shell|set <container-name>|unset}"
+    echo "❌ Uso: $0 {start|stop|remove|status|shell|set <container-name>|set-node-version <versão>|unset}"
     exit 1
     ;;
 esac
