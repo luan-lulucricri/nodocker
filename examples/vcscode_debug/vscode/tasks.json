@@ -1,0 +1,52 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "docker-up",
+      "type": "shell",
+      "command": "docker-compose up --build",
+      "isBackground": true,
+      "problemMatcher": [ ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": false
+      }
+    },
+    {
+      "label": "run-app",
+      "type": "shell",
+      "command": "yarn run inspect",
+      "isBackground": true,
+      "problemMatcher": [ ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "docker-dev",
+      "dependsOn": [ "docker-up", "run-app" ],
+      "dependsOrder": "sequence",
+      "isBackground": true,
+      "problemMatcher": [ ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "docker-down",
+      "type": "shell",
+      "command": "docker-compose down",
+      "problemMatcher": [ ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": false
+      }
+    }
+
+
+  ]
+}

@@ -1,5 +1,11 @@
 #!/bin/bash
 
+CONFIG_FILE="$HOME/.nodocker"
+
+if [ -f "$CONFIG_FILE" ]; then
+    export NODE_ENV_DK=$(grep "^NODE_ENV_DK=" "$CONFIG_FILE" | cut -d '=' -f2-)
+    export NODE_VERSION_DK=$(grep "^NODE_VERSION_DK=" "$CONFIG_FILE" | cut -d '=' -f2-)
+fi
 
 if [ -z "$NODE_ENV_DK" ]; then
     echo "Erro: a variável de ambiente NODE_ENV_DK não está definida."

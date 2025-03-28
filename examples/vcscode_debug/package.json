@@ -1,0 +1,9 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "Este projeto contém scripts para facilitar a execução do ambiente Node.js dentro de um container Docker.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  }
+}
