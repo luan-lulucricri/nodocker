@@ -1,39 +1,76 @@
 #!/bin/bash
 
-# Detecta o shell e escolhe o arquivo de perfil correto
-if [ -n "$ZSH_VERSION" ]; then
-  PROFILE_FILE="$HOME/.zshrc"
-else
-  PROFILE_FILE="$HOME/.bashrc"
-fi
+CONFIG_FILE="$HOME/.nodocker"
 
-# Se NODE_ENV_DK não estiver definido, tenta carregar do perfil
-if [ -z "$NODE_ENV_DK" ]; then
-  if grep -q "export NODE_ENV_DK=" "$PROFILE_FILE"; then
-    NODE_ENV_DK=$(grep "export NODE_ENV_DK=" "$PROFILE_FILE" | cut -d '=' -f2)
-    export NODE_ENV_DK
+
+verify_env() {
+  if [ -z "$CONTAINER_NAME" ]; then
+      echo "❌ Erro: NODE_ENV_DK não está definido. Use '$0 set <container-name>' antes."
+      exit 1
   fi
-fi
+}
 
-# Se NODE_VERSION_DK não estiver definido, tenta carregar do perfil
-if [ -z "$NODE_VERSION_DK" ]; then
-  if grep -q "export NODE_VERSION_DK=" "$PROFILE_FILE"; then
-    NODE_VERSION_DK=$(grep "export NODE_VERSION_DK=" "$PROFILE_FILE" | cut -d '=' -f2)
-    export NODE_VERSION_DK
-  else
-    NODE_VERSION_DK="latest"
+# Carrega as variáveis do arquivo ~/.nodocker
+load_config() {
+  if [ -f "$CONFIG_FILE" ]; then
+    export NODE_ENV_DK=$(grep "^NODE_ENV_DK=" "$CONFIG_FILE" | cut -d '=' -f2-)
+    export NODE_VERSION_DK=$(grep "^NODE_VERSION_DK=" "$CONFIG_FILE" | cut -d '=' -f2-)
   fi
-fi
 
-# Define o nome do container baseado no valor da variável
+  NODE_VERSION_DK="${NODE_VERSION_DK:-latest}"
+}
+
+# Atualiza ou adiciona uma variável no arquivo ~/.nodocker
+set_config_value() {
+  VAR_NAME="$1"
+  VAR_VALUE="$2"
+
+  # Remove linha antiga (se existir)
+  sed -i "/^${VAR_NAME}=/d" "$CONFIG_FILE" 2>/dev/null
+
+  # Adiciona nova linha
+  echo "${VAR_NAME}=${VAR_VALUE}" >> "$CONFIG_FILE"
+}
+
+# Printa as Configurações do nodocker config
+print_config() {
+  echo "📄 Configuração atual do ~/.nodocker:"
+  echo
+
+  if [ ! -f "$CONFIG_FILE" ]; then
+    echo "⚠️  Arquivo de configuração não encontrado: $CONFIG_FILE"
+    return
+  fi
+
+  grep -E "^NODE_ENV_DK=|^NODE_VERSION_DK=" "$CONFIG_FILE" | while IFS='=' read -r key value; do
+    case "$key" in
+      NODE_ENV_DK)
+        echo "🔧 NODE_ENV_DK       = $value"
+        ;;
+      NODE_VERSION_DK)
+        echo "🧪 NODE_VERSION_DK   = $value"
+        ;;
+    esac
+  done
+  echo
+}
+
+
+# Remove uma variável do arquivo ~/.nodocker
+unset_config_value() {
+  VAR_NAME="$1"
+  sed -i "/^${VAR_NAME}=/d" "$CONFIG_FILE" 2>/dev/null
+}
+
+# Carrega config
+load_config
+
+# Define o nome do container
 CONTAINER_NAME="${NODE_ENV_DK:-}"
 
 case "$1" in
   start)
-    if [ -z "$CONTAINER_NAME" ]; then
-      echo "❌ Erro: NODE_ENV_DK não está definido. Use '$0 set <container-name>' antes."
-      exit 1
-    fi
+    verify_env
 
     if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
       echo "⚡ O container '${CONTAINER_NAME}' já existe. Iniciando..."
@@ -45,39 +82,27 @@ case "$1" in
     ;;
 
   stop)
-    if [ -z "$CONTAINER_NAME" ]; then
-      echo "❌ Erro: NODE_ENV_DK não está definido. Use '$0 set <container-name>' antes."
-      exit 1
-    fi
+    verify_env
 
     echo "🛑 Parando o container '${CONTAINER_NAME}'..."
     docker stop "${CONTAINER_NAME}"
     ;;
 
   remove)
-    if [ -z "$CONTAINER_NAME" ]; then
-      echo "❌ Erro: NODE_ENV_DK não está definido. Use '$0 set <container-name>' antes."
-      exit 1
-    fi
+    verify_env
 
     echo "🔥 Removendo o container '${CONTAINER_NAME}'..."
     docker rm "${CONTAINER_NAME}"
     ;;
 
   status)
-    if [ -z "$CONTAINER_NAME" ]; then
-      echo "❌ Erro: NODE_ENV_DK não está definido. Use '$0 set <container-name>' antes."
-      exit 1
-    fi
+    verify_env
 
     docker ps -a --format "table {{.Names}}\t{{.Status}}" | grep "${CONTAINER_NAME}" || echo "❌ O container '${CONTAINER_NAME}' não existe."
     ;;
 
   shell)
-    if [ -z "$CONTAINER_NAME" ]; then
-      echo "❌ Erro: NODE_ENV_DK não está definido. Use '$0 set <container-name>' antes."
-      exit 1
-    fi
+    verify_env
 
     echo "🔍 Abrindo um shell dentro do container '${CONTAINER_NAME}'..."
     docker exec -it "${CONTAINER_NAME}" bash
@@ -90,17 +115,8 @@ case "$1" in
       exit 1
     fi
 
-    CONTAINER_NAME="$2"
-    export NODE_ENV_DK="$2"
-
-    # Adiciona a variável ao arquivo de perfil para persistência
-    if grep -q "export NODE_ENV_DK=" "$PROFILE_FILE"; then
-      sed -i "s|export NODE_ENV_DK=.*|export NODE_ENV_DK=${CONTAINER_NAME}|" "$PROFILE_FILE"
-    else
-      echo "export NODE_ENV_DK=${CONTAINER_NAME}" >> "$PROFILE_FILE"
-    fi
-
-    echo "✅ Variável NODE_ENV_DK definida como '${CONTAINER_NAME}' e persistida no ambiente."
+    set_config_value "NODE_ENV_DK" "$2"
+    echo "✅ NODE_ENV_DK definido como '$2'"
     ;;
 
   set-node-version)
@@ -110,31 +126,25 @@ case "$1" in
       exit 1
     fi
 
-    NODE_VERSION_DK="$2"
-    export NODE_VERSION_DK="$2"
-
-    # Adiciona a variável ao arquivo de perfil para persistência
-    if grep -q "export NODE_VERSION_DK=" "$PROFILE_FILE"; then
-      sed -i "s|export NODE_VERSION_DK=.*|export NODE_VERSION_DK=${NODE_VERSION_DK}|" "$PROFILE_FILE"
-    else
-      echo "export NODE_VERSION_DK=${NODE_VERSION_DK}" >> "$PROFILE_FILE"
-    fi
-
-    echo "✅ Versão do Node.js definida como '${NODE_VERSION_DK}' e persistida no ambiente."
+    set_config_value "NODE_VERSION_DK" "$2"
+    echo "✅ Versão do Node.js definida como '$2'"
+    ;;
+  
+  config)
+    print_config
     ;;
 
-  unset)
-    unset NODE_ENV_DK
-    sed -i "/export NODE_ENV_DK=/d" "$PROFILE_FILE"
-    echo "🗑️ Variável NODE_ENV_DK removida."
 
-    unset NODE_VERSION_DK
-    sed -i "/export NODE_VERSION_DK=/d" "$PROFILE_FILE"
-    echo "🗑️ Variável NODE_VERSION_DK removida."
+  unset)
+    unset_config_value "NODE_ENV_DK"
+    echo "🗑️ NODE_ENV_DK removido."
+
+    unset_config_value "NODE_VERSION_DK"
+    echo "🗑️ NODE_VERSION_DK removido."
     ;;
 
   *)
-    echo "❌ Uso: $0 {start|stop|remove|status|shell|set <container-name>|set-node-version <versão>|unset}"
+    echo "❌ Uso: $0 {start|stop|remove|status|shell|config|set <container-name>|set-node-version <versão>|unset}"
     exit 1
     ;;
 esac
