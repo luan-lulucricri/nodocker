@@ -124,6 +124,12 @@ nodocker status
 nodocker shell
 ```
 
+### Verificar as configurações atuais
+
+```bash
+nodocker config
+```
+
 ### Resetando a Configuração
 
 Se quiser remover a configuração do container:
