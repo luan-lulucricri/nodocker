@@ -1,30 +1,32 @@
 #!/bin/bash
 
-SOURCE_DIR="./bin"
+SOURCE_DIR="$(pwd)/bin"
 TARGET_DIR="/usr/local/bin"
 USER_NAME="$(whoami)"
 GROUP_NAME="$(id -gn)"
-SHELL_RC="$HOME/.zshrc "  # troque para .zshrc se usar zsh
+SHELL_RC="$HOME/.zshrc"  # ou .bashrc, se for o caso
 
-echo "Criando links simbólicos e ajustando permissões..."
+echo "📁 Copiando arquivos para $TARGET_DIR e ajustando permissões..."
 
 for file in "$SOURCE_DIR"/*; do
     filename=$(basename "$file")
+    target_path="$TARGET_DIR/$filename"
 
-    # Criação do link simbólico
-    sudo ln -sf "$file" "$TARGET_DIR/$filename"
-    sudo chown "$USER_NAME:$GROUP_NAME" "$TARGET_DIR/$filename"
-    echo "✔️  Link criado: $TARGET_DIR/$filename -> $file"
+    # Copiar o arquivo
+    sudo cp -f "$file" "$target_path"
+    sudo chown "$USER_NAME:$GROUP_NAME" "$target_path"
+    sudo chmod +x "$target_path"  # garantir que seja executável
+    echo "✔️  Copiado: $file -> $target_path"
 
-    # Criação do alias se não existir
+    # Alias apontando para o binário copiado
     if ! grep -q "alias $filename=" "$SHELL_RC"; then
-        echo "alias $filename=\"$file\"" >> "$SHELL_RC"
-        echo "🔗 Alias adicionado ao $SHELL_RC: $filename"
+        echo "alias $filename=\"$target_path\"" >> "$SHELL_RC"
+        echo "🔗 Alias adicionado ao $SHELL_RC: $filename -> $target_path"
     else
         echo "⚠️  Alias '$filename' já existe em $SHELL_RC, pulando..."
     fi
 done
 
 echo ""
-echo "✅ Todos os links e aliases foram processados."
+echo "✅ Todos os arquivos foram copiados e os aliases criados."
 echo "💡 Para aplicar os aliases imediatamente: source $SHELL_RC"
